@@ -1,0 +1,44 @@
+Jack Syntactic Elements
+
+White Space and Comments:
+
+Space characters, newline characters and comments are ignored
+
+// Comment to end of line 
+/* Comment until closing */
+/** API documentation comment */
+
+Symbols:
+( )     Used for grouping arithmetic expressions and enclosing parameters for parameter lists and argument lists.
+[ ]     Used for array indexing
+{ }     Used for grouping program units and statements
+,       Variable list seperator
+;       Statement terminator
+=       Assignment and comparison operator
+.       Class membership
++ - * / & | ~ < > Operators
+
+Reserved Words:
+class, constructor, method, function        Program components
+int, char, boolean, void                    Primitive types
+var, static, field                          Variable declarations
+let, do, if, else, while, return            Statements
+true, false, null                           Constant values
+this                                        Object reference
+
+Constants:
+Integer Constants must be positive and in standard decimal notation, e.g. 1984. 
+Negative integers are expressions consisting of a positive integer constant with the unary minus operator.
+
+String Constants are enclosed with double quotes (") characters and may contain any character except for newline and double quote. 
+(These are provided by String.newLine() and String.doubleQuote() from the standard library)
+
+Boolean Constants are true or false.
+
+The constant null signifies a null reference.
+
+Identifiers:
+
+Identifiers are an arbitrarily long sequence of letters (A-Z, a-z), digits (0,9) and underscore "_". The first character must be a letter or an underscore.
+The language is case sensitive, therfore 'x' and 'X' are treated differently.
+
