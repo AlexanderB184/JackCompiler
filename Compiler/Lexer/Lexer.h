@@ -8,23 +8,34 @@
 namespace Jack {
 
 /**
- *  Return type of Jack::tokenize
- *  Represents the 4 possible exit conditions for tokenize
- *  okay: the function completed without exception
- *  unknown_symbol: the function encountered a symbol it doesn't recognise
- *  unclosed_quotes: a string constant extends over a new line or isn't closed
- *  unclosed_comment: a multiline comment isn't closed
+ * The possible exit conditions for the Jack::tokenize function.
  */
 enum class lexerResult {
-  okay,
-  unknown_symbol,
-  unclosed_quotes,
-  unclosed_comment
+  okay,            /**The function completed without exception.*/
+  unknown_symbol,  /**The function encountered a symbol it doesn't recognize.*/
+  unclosed_quotes, /**A string constant extends over a new line or isn't closed.
+                    */
+  unclosed_comment /**A multiline comment isn't closed. */
 };
 
 /**
- * Reads through the script and generates tokens as defined in the Syntactic
- * Elements document Returns lexerResult with either okay or and error code
+ * Tokenizes the given script according to the rules defined in the Syntactic
+ * Elements document.
+ *
+ * This function reads through the provided script and generates a sequence
+ * of tokens based on the language's syntax rules. If any errors occur during
+ * tokenization, the function returns an appropriate lexerResult code and stores
+ * a token of type Jack::TokenType::Invalid, which indicates the line and
+ * column where the error occurred.
+ *
+ * @param[out] tokens A vector to store the generated tokens.
+ * @param[in] script The input script to be tokenized.
+ * @return The result of the tokenization process, indicating success or a
+ * specific error.
+ *
+ * @note The tokens vector will be modified even if an error occurs, so it's
+ * important to check the returned lexerResult value to determine the success or
+ * failure of the tokenization process.
  */
 lexerResult tokenize(std::vector<Token>& tokens, const std::string& script);
 

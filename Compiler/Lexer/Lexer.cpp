@@ -6,6 +6,7 @@
 
 using std::string;
 using std::vector;
+
 typedef string::const_iterator iter_t;
 
 namespace Jack {
