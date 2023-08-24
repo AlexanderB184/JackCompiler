@@ -1,4 +1,5 @@
-#include "LexerOut.h"
+#include "PrintTypes.h"
+
 namespace Jack {
 
 std::string to_string(Jack::TokenType type) {

@@ -3,58 +3,29 @@
 #include <string>
 #include <vector>
 
+#include "../JackTypes.h"
+
 namespace Jack {
 
-using std::string;
-using std::vector;
-
-enum class TokenType {
-  None = 0,
-  Keyword,
-  Identifier,
-  Number,
-  String,
-  Symbol,
-  Invalid
+/**
+ *  Return type of Jack::tokenize
+ *  Represents the 4 possible exit conditions for tokenize
+ *  okay: the function completed without exception
+ *  unknown_symbol: the function encountered a symbol it doesn't recognise
+ *  unclosed_quotes: a string constant extends over a new line or isn't closed
+ *  unclosed_comment: a multiline comment isn't closed
+ */
+enum class lexerResult {
+  okay,
+  unknown_symbol,
+  unclosed_quotes,
+  unclosed_comment
 };
 
-struct Token {
-  string value;
-  TokenType type;
-  size_t row, col;
-  Token(string&&, TokenType, size_t, size_t);
-  Token(string const&, TokenType, size_t, size_t);
-};
-
-class Lexer {
- private:
-  size_t curr_line, curr_col;
-  string::const_iterator it;
-  const string::const_iterator end;
-
-  void next();
-  void newline();
-  void skip(int n);
-
-  Token makeToken(TokenType);
-
-  
-  Token extractWord();
-  Token extractNumber();
-  Token extractString();
-  Token extractSymbol();
-  Token extractWhiteSpace();
-  Token extractSingleLineComment();
-  Token extractMultiLineComment();
-
- public:
-  Lexer(string const&);
-  Token extractToken();
-  bool atEnd();
-};
-vector<Token> tokenize(const string&);
-vector<Token> tokenize(const char*);
-//vector<Token> tokenize(const string&);
-void throwError(string, Token);
+/**
+ * Reads through the script and generates tokens as defined in the Syntactic
+ * Elements document Returns lexerResult with either okay or and error code
+ */
+lexerResult tokenize(std::vector<Token>& tokens, const std::string& script);
 
 }  // namespace Jack

@@ -1,131 +1,163 @@
 #include "Lexer.h"
 
 #include "../CompileError/Error.h"
+#include "../JackTypes.h"
 #include "LexerTokenClassification.h"
+
+using std::string;
+using std::vector;
+typedef string::const_iterator iter_t;
 
 namespace Jack {
 
-Lexer::Lexer(string const& script)
-    : curr_line(0), curr_col(0), it(script.cbegin()), end(script.cend()) {}
+#define newline \
+  col = 0;      \
+  line++;
 
-void Lexer::next() {
-  curr_col++;
+#define next   \
+  word += *it; \
+  col++;       \
   it++;
-}
 
-void Lexer::newline() {
-  curr_col = 0;
-  curr_line++;
-}
-
-void Lexer::skip(int n) {
-  curr_col += n;
+#define skip(n) \
+  col += n;     \
   it += n;
-}
 
-bool Lexer::atEnd() { return it >= end; }
-Token Lexer::makeToken(TokenType type) {
-  return Token{"", type, curr_line, curr_col};
-}
+#define resetState             \
+  word.clear();                \
+  STATE = lexerState::UNKNOWN; \
+  goto GETTYPE;
 
-Token Lexer::extractWord() {
-  Token word = makeToken(TokenType::Identifier);
-  while (it != end && !isWhiteSpace(*it) && !isSymbol(*it)) {
-    word.value.push_back(*it);
-    next();
-  }
-  if (isKeyword(word.value)) word.type = TokenType::Keyword;
-  return word;
-}
+#define addToken(type)                        \
+  tokens.emplace_back(word, type, line, col); \
+  resetState;
 
-Token Lexer::extractNumber() {
-  Token number = makeToken(TokenType::Number);
-  while (it != end && !isWhiteSpace(*it) && !isSymbol(*it) && !isLetter(*it)) {
-    number.value.push_back(*it);
-    next();
-  }
-  return number;
-}
+#define addTokenEndOfFile(type) tokens.emplace_back(word, type, line, col);
 
-Token Lexer::extractSymbol() {
-  Token symbol = makeToken(TokenType::Symbol);
-  symbol.value.push_back(*it);
-  next();
-  return symbol;
-}
+static std::unordered_set<string> keywords(_KEYWORDS);
 
-Token Lexer::extractString() {
-  Token str = makeToken(TokenType::String);
-  skip(1);
-  while (it < end && (*it) != '\"' && (*it) != '\n' && (*it) != '\r') {
-    str.value.push_back(*it);
-    next();
-  }
-  if (it != end) {
-    skip(1);
-  } else {
-    throwError("unclosed quotes", str);
-  }
-  return str;
-}
+enum class lexerState {
+  UNKNOWN,
+  WORD,
+  NUMBER,
+  STRING,
+  SYMBOL,
+  LINECOMMENT,
+  MULTILINECOMMENT,
+  EMPTY
+};
 
-Token Lexer::extractWhiteSpace() {
-  Token none = makeToken(TokenType::None);
-  while (it < end && isWhiteSpace(*it)) {
-    if (*it == '\n' || *it == '\r')
-      newline();
-    else
-      next();
-  }
-  return none;
-}
+Token::Token(string&& val, TokenType type, size_t line, size_t col)
+    : value(val), type(type), row(line), col(col) {}
 
-Token Lexer::extractSingleLineComment() {
-  Token none = makeToken(TokenType::None);
-  skip(2);
-  while (it < end && *it != '\n' && *it != '\r') {
-    next();
-  }
-  if (it < end) next();
-  return none;
-}
+Token::Token(const string& val, TokenType type, size_t line, size_t col)
+    : value(val), type(type), row(line), col(col) {}
 
-Token Lexer::extractMultiLineComment() {
-  Token none = makeToken(TokenType::None);
-  skip(2);
-  while (it < end) {
-    if (*it == '*' && it + 1 < end && *(it + 1) == '/') {
-      skip(2);
-      return none;
-    }
-    next();
-  }
-  throwError("unclosed multi line comment", none);
-}
-
-Token Lexer::extractToken() {
-  if (isWhiteSpace(*it)) return extractWhiteSpace();
-  if (isLetter(*it)) return extractWord();
-  if (isNumber(*it)) return extractNumber();
-  if (*it == '\"') return extractString();
-  if (*it == '/' && *(it + 1) == '/') return extractSingleLineComment();
-  if (*it == '/' && *(it + 1) == '*') return extractMultiLineComment();
-  if (isSymbol(*it)) return extractSymbol();
-  throwError("unexpected symbol", makeToken(TokenType::Invalid));
-}
-
-vector<Token> tokenize(const string& script) {
-  Lexer lexer(script);
-  vector<Token> tokens;
-  while (lexer.atEnd()) {
-    Token token = lexer.extractToken();
-    if (token.type != TokenType::None) {
-      tokens.push_back(token);
-    }
-  }
-  return tokens;
-}
-
-void throwError(string type, Token what) { return; }
+lexerResult tokenize(vector<Token>& tokens, string const& script) {
+  size_t line = 0, col = 0;
+  iter_t it = script.cbegin(), tok_start;
+  lexerState STATE = lexerState::UNKNOWN;
+  char curr_char, next_char;
+  std::string word;
+GETTYPE:
+  while (*it) {
+    curr_char = *it;
+    next_char = *(it + 1);
+    switch (STATE) {
+      case lexerState::UNKNOWN:
+        if (letter(curr_char)) {
+          STATE = lexerState::WORD;
+        } else if (number(curr_char)) {
+          STATE = lexerState::NUMBER;
+        } else if (whitespace(curr_char)) {
+          STATE = lexerState::EMPTY;
+        } else if (curr_char == '\"') {
+          STATE = lexerState::STRING;
+          skip(1);
+        } else if (curr_char == '/' && next_char == '/') {
+          STATE = lexerState::LINECOMMENT;
+          skip(2);
+        } else if (curr_char == '/' && next_char == '*') {
+          STATE = lexerState::MULTILINECOMMENT;
+          skip(2);
+        } else if (symbol(curr_char)) {
+          STATE = lexerState::SYMBOL;
+        } else {
+          next;
+          addTokenEndOfFile(TokenType::Invalid);
+          return lexerResult::unknown_symbol;
+        }
+        tok_start = it;
+        break;
+      case lexerState::WORD:
+        if (!(letter(curr_char) || number(curr_char))) {
+          if (isKeyword(word)) {
+            addToken(TokenType::Keyword);
+          } else {
+            addToken(TokenType::Identifier);
+          }
+        }
+        break;
+      case lexerState::NUMBER:
+        if (!number(curr_char)) {
+          addToken(TokenType::Number);
+        }
+        break;
+      case lexerState::SYMBOL:
+        addToken(TokenType::Symbol);
+        break;
+      case lexerState::STRING:
+        if (curr_char == '\"') {
+          skip(1);
+          addToken(TokenType::String);
+        } else if (linebreak(curr_char)) {
+          addTokenEndOfFile(TokenType::Invalid);
+          return lexerResult::unclosed_quotes;
+        }
+      case lexerState::LINECOMMENT:
+        if (linebreak(curr_char)) STATE = lexerState::EMPTY;
+        break;
+      case lexerState::MULTILINECOMMENT:
+        if (curr_char == '*' && next_char == '/') {
+          skip(2);
+          resetState;
+        }
+        break;
+      case lexerState::EMPTY:
+        if (!whitespace(curr_char)) {
+          resetState;
+        };
+        if (linebreak(curr_char)) {
+          newline;
+        }
+        break;
+    }  // switch(STATE)
+    next;
+  }  // while(*it)
+  switch (STATE) {
+    case lexerState::WORD:
+      if (isKeyword(word)) {
+        addTokenEndOfFile(TokenType::Keyword);
+      } else {
+        addTokenEndOfFile(TokenType::Identifier);
+      }
+      break;
+    case lexerState::NUMBER:
+      addTokenEndOfFile(TokenType::Number);
+      break;
+    case lexerState::SYMBOL:
+      addTokenEndOfFile(TokenType::Symbol);
+      break;
+    case lexerState::STRING:
+      addTokenEndOfFile(TokenType::Invalid);
+      return lexerResult::unclosed_quotes;
+    case lexerState::MULTILINECOMMENT:
+      addTokenEndOfFile(TokenType::Invalid);
+      return lexerResult::unclosed_comment;
+    default:
+      break;
+  }  // switch(STATE)
+  return lexerResult::okay;
+}  // tokenize
 
 }  // namespace Jack

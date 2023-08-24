@@ -1,8 +1,6 @@
 #pragma once
-
 #include <iostream>
-
-#include "Lexer.h"
+#include "../JackTypes.h"
 
 namespace Jack {
 
