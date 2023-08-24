@@ -270,8 +270,6 @@ int parseTerm(ParseTree& parent, Token*& tokptr) {
       parseTerm(self, tokptr);
       break;
     case identifier:
-      // identifier ('.' identifier)? ( '(' EXPRESSION_LIST ')' )? ('['
-      // EXPRESSION ']')?
       mustBeType(identifier);
       if (have(symbol, ".")) {
         mustBe(symbol, ".");
@@ -291,6 +289,10 @@ int parseTerm(ParseTree& parent, Token*& tokptr) {
   }
 }
 
-ParseTree parse(std::vector<Token> const& tokens) {}
-
+ParseTree parse(std::vector<Token>& tokens) {
+  if (tokens.empty()) {
+    except;
+  }
+  return parseProgram(tokens.data());
+}
 }  // namespace Jack
