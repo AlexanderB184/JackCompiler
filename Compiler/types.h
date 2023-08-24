@@ -22,12 +22,35 @@ struct Token {
   Token(std::string const&, TokenType, size_t, size_t);
 };
 
-enum class ParseTreeType {};
+enum class ParseTreeType {
+  Class,
+  ClassVarDec,
+  Subroutine,
+  ParameterList,
+  SubroutineBody,
+  VarDec,
+  Statements,
+  LetStatement,
+  DoStatement,
+  IfStatement,
+  WhileStatement,
+  ReturnStatement,
+  Expression,
+  Term,
+  ExpressionList,
+  Keyword,
+  Identifier,
+  Number,
+  String,
+  Symbol
+};
 
 struct ParseTree {
   ParseTreeType type;
   std::vector<ParseTree> children;
   Token tok;
+  ParseTree(Token);
+  ParseTree(ParseTreeType);
 };
 
 }  // namespace Jack
