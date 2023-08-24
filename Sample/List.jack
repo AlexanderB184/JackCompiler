@@ -1,0 +1,102 @@
+class list {
+    field int value;
+    field list next;
+
+    /** 
+     * Constructs a default list node
+     */
+    constructor list new(int value) {
+        var list self;
+        let self = Memory.alloc(2);
+        return self;
+    }
+
+    /**
+     * Destroys one list node
+     */
+    method void dispose() {
+        if(~(this = null)) {
+            do Memory.deAlloc(this);
+        }
+        return;
+    }
+
+    /**
+     * Destroys the entire list
+     */
+    method void delete() {
+        if(~(this = null)) {
+            do next.delete(); // recursively destroy list
+            do Memory.deAlloc(this);
+        }
+        return;
+    }
+
+    method void setValue(int newValue) {
+        let value = newValue;
+        return;
+    }
+    method void setNext(list newNext) {
+        let next = newNext;
+        return;
+    }
+    method int value() {
+        return value;
+    }
+    method list next() {
+        return next;
+    }
+    method list push(int value) {
+        var list newNode;
+        let newNode = new();
+        do newNode.setValue(value);
+        do newNode.setNext(this);
+        return newNode;
+    }
+    method list pop() {
+        var list nextNode;
+        if (next = null) {
+            return null;
+        }
+        let nextNode = next;
+        do dispose(this);
+        return nextNode;
+    }
+    method list insert(int where, int what) {
+        var list newNode;
+        if (where < 1) {
+            let this = push(what);
+        }
+        else {
+            let this = insert(where - 1, what);
+        }
+        return this;
+    }
+    method list remove(int what) {
+        // this is not an lvalue so we must create a variable
+        var list curr;
+        if (this = null) {
+            return null;
+        }
+        if (value = what) {
+            let curr = curr.pop();
+        } else {
+            let next = next.remove(what);
+        }
+        return curr;
+    }
+    method list removeAll(int what) {
+        var list curr;
+        let curr = this;
+        if (this = null) {
+            return null;
+        }
+        while (~(curr = null)/*Code to ensure correct order of operations*/& (value = what)) {
+            let curr = pop(curr);
+        }
+        if (~(curr = null)) {
+            let next = next.remove(what);
+        }
+        return curr;
+    }
+}

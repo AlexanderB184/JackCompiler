@@ -1,9 +1,9 @@
 class Math {
-    function void init()
-    function int abs(int x)
-    function int multiply(int x, int y)
-    function int divide(int x, int y)
-    function int min(int x, int y)
-    function int max(int x, int y)
-    function int sqrt(int x)
+    function void init() {}
+    function int abs(int x) {}
+    function int multiply(int x, int y) {}
+    function int divide(int x, int y) {}
+    function int min(int x, int y) {}
+    function int max(int x, int y) {}
+    function int sqrt(int x) {}
 }

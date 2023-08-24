@@ -1,0 +1,21 @@
+Jack Abstract Syntax Tree 
+Type             | Rule
+PROGRAM         | CLASS 
+CLASS           | 'class' identifier '{' CLASS_VARDEC* SUBROUTINE* '}'
+CLASS_VARDEC    | ('field'|'static') ('int' | 'char' | 'bool' | identifier) identifier (',' identifier)* ';'
+PARAMETER_LIST  | (('int' | 'char' | 'bool' | identifier) identifier (',' ('int' | 'char' | 'bool' | identifier) identifier)*)? 
+SUBROUTINE      | ('constructor','method','function') ('int' | 'char' | 'bool' | 'void' | identifier) identifier '(' PARAMETER_LIST ')' '{' SUBROUTINE_BODY'}'
+SUBROUTINE_BODY | VARDEC* STATEMENTS
+VARDEC          | 'var' ('int' | 'char' | 'bool' | identifier) identifier (',' identifier)* ';'
+STATEMENTS      | (LET_STATEMENT | DO_STATEMENT | IF_STATEMENT | WHILE_STATEMENT | RETURN_STATEMENT)*
+LET_STATEMENT   | 'let' identifier ('[' EXPRESSION ']')? '=' EXPRESSION ';'
+DO_STATEMENT    | 'do' EXPRESSION ';'
+IF_STATEMENT    | 'if' '(' EXPRESSION ')' '{' STATEMENTS '}' ('else' '{' STATEMENTS '}')?
+WHILE_STATEMENT | 'while '(' EXPRESSION ')' '{' STATEMENTS '}'
+RETURN_STATEMENT| 'return EXPRESSION ';'
+EXPRESSION      | 'skip' | TERM (OP TERM)*
+EXPRESSION_LIST | (EXPRESSION (',' EXPRESSION)*)?
+TERM            | INTCONST | STRINGCONST | KEYWORDCONST | (UNARY_OP TERM) | ( '(' EXPRESSION ')' ) | identifier ('.' identifier)? ( '(' EXPRESSION_LIST ')' )? ('[' EXPRESSION ']')?
+OP              | '+' | '-' | '*' | '/' | '<' | '>' | '=' | '|' | '&'
+UNARY_OP        | '-' | '~'
+KEYWORDCONST    | 'true' | 'false' | 'null' | 'this'
