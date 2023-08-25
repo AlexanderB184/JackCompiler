@@ -29,11 +29,12 @@ namespace Jack {
   STATE = lexerState::UNKNOWN; \
   goto GETTYPE;
 
-#define addToken(type)                        \
-  tokens.emplace_back(word, type, line, col); \
+#define addToken(type)                                   \
+  tokens.emplace_back(std::move(word), type, line, col); \
   resetState;
 
-#define addTokenEndOfFile(type) tokens.emplace_back(word, type, line, col);
+#define addTokenEndOfFile(type) \
+  tokens.emplace_back(std::move(word), type, line, col);
 
 static std::unordered_set<string> keywords(_KEYWORDS);
 
@@ -49,12 +50,24 @@ enum class lexerState {
 };
 
 Token::Token(string&& val, TokenType type, size_t line, size_t col)
-    : value(val), type(type), row(line), col(col) {}
+    : value(std::move(val)), type(type), row(line), col(col) {
+  val.clear();
+}
 
 Token::Token(const string& val, TokenType type, size_t line, size_t col)
     : value(val), type(type), row(line), col(col) {}
 
-lexerResult tokenize(vector<Token>& tokens, string const& script) {
+lexerResult::lexerResult(lexerResult::ExitCode exit_code,
+                         std::vector<Token>&& tokens, size_t line, size_t col)
+    : exit_code(exit_code),
+      tokens(std::move(tokens)),
+      exit_line(line),
+      exit_col(col) {
+  this->tokens.shrink_to_fit();
+}
+
+lexerResult tokenize(string const& script) {
+  vector<Token> tokens;
   size_t line = 0, col = 0;
   iter_t it = script.cbegin(), tok_start;
   lexerState STATE = lexerState::UNKNOWN;
@@ -86,7 +99,8 @@ GETTYPE:
         } else {
           next;
           addTokenEndOfFile(TokenType::Invalid);
-          return lexerResult::unknown_symbol;
+          return lexerResult(lexerResult::ExitCode::unkown_symbol,
+                             std::move(tokens), line, col);
         }
         tok_start = it;
         break;
@@ -113,7 +127,8 @@ GETTYPE:
           addToken(TokenType::String);
         } else if (linebreak(curr_char)) {
           addTokenEndOfFile(TokenType::Invalid);
-          return lexerResult::unclosed_quotes;
+          return lexerResult(lexerResult::ExitCode::unclosed_quotes,
+                             std::move(tokens), line, col);
         }
       case lexerState::LINECOMMENT:
         if (linebreak(curr_char)) STATE = lexerState::EMPTY;
@@ -151,14 +166,16 @@ GETTYPE:
       break;
     case lexerState::STRING:
       addTokenEndOfFile(TokenType::Invalid);
-      return lexerResult::unclosed_quotes;
+      return lexerResult(lexerResult::ExitCode::unclosed_quotes,
+                         std::move(tokens), line, col);
     case lexerState::MULTILINECOMMENT:
       addTokenEndOfFile(TokenType::Invalid);
-      return lexerResult::unclosed_comment;
+      return lexerResult(lexerResult::ExitCode::unclosed_comment,
+                         std::move(tokens), line, col);
     default:
       break;
   }  // switch(STATE)
-  return lexerResult::okay;
+  return lexerResult(lexerResult::ExitCode::okay, std::move(tokens), line, col);
 }  // tokenize
 
 }  // namespace Jack
