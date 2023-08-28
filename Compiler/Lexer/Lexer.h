@@ -3,20 +3,20 @@
 #include <string>
 #include <vector>
 
-#include "../JackTypes.h"
+#include "../Token.h"
 
 namespace Jack {
 
 /**
  * Return type for the Jack::tokenize function.
  */
-struct lexerResult {
+struct LexerResult {
     /**
      * The possible exit conditions for the Jack::tokenize function.
      */
     enum class ExitCode {
         okay,            /**< The function completed without exception. */
-        unkown_symbol,   /**< The function encountered a symbol it doesn't recognize. */
+        unknown_symbol,   /**< The function encountered a symbol it doesn't recognize. */
         unclosed_quotes, /**< A string constant extends over a new line or isn't closed. */
         unclosed_comment /**< A multiline comment isn't closed. */
     } exit_code;
@@ -35,7 +35,7 @@ struct lexerResult {
     /**
      * Constructor.
      */
-    lexerResult(ExitCode, std::vector<Token>&&, size_t, size_t);
+    LexerResult(ExitCode, std::vector<Token>&&, size_t, size_t);
 };
 
 /**
@@ -55,5 +55,5 @@ struct lexerResult {
  *       so it's important to check the exit_code within the returned lexerResult value
  *       to determine the success or failure of the tokenization process.
  */
-lexerResult tokenize(const std::string& script);
+LexerResult tokenize(const std::string& script);
 }

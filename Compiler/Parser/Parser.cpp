@@ -1,298 +1,341 @@
 #include "Parser.h"
 
-#define keyword TokenType::Keyword
-#define identifier TokenType::Identifier
-#define symbol TokenType::Symbol
-#define stringConstant TokenType::String
-#define intConstant TokenType::Number
+#include <iostream>
 
-#define next() tokptr++
-#define have(TYPE, VAL) (tokptr->type == TYPE && tokptr->value == VAL)
-#define couldBe(TYPE, VAL) \
-  if (have(TYPE, VAL)) {   \
-    addChild(*tokptr);     \
-    next();                \
-  }
-#define couldBeType(TYPE) \
-  if (haveType(TYPE)) {   \
-    addChild(*tokptr);    \
-    next();               \
-  }
-#define orCouldBe(TYPE, VAL)  \
-  else if (have(TYPE, VAL)) { \
-    addChild(*tokptr);        \
-    next();                   \
-  }
-#define orCouldBeType(TYPE)  \
-  else if (haveType(TYPE)) { \
-    addChild(*tokptr);       \
-    next();                  \
-  }
-#define otherwise(_STATEMENTS) \
-  else {                       \
-    _STATEMENTS                \
-  }
-#define otherwiseMustBe(TYPE, VAL) else mustBe(TYPE, VAL)
-#define otherwiseMustBeType(TYPE) else mustBeType(TYPE)
-#define except throwError("Parser Error", TYPE, *tokptr);
-#define mustBe(TYPE, VAL)                           \
-  if (have(TYPE, VAL)) {                            \
-    addChild(*tokptr);                              \
-    next();                                         \
-  } else {                                          \
-    throwError("Parser Error", TYPE, VAL, *tokptr); \
-  }
-#define haveType(TYPE) (tokptr->type == TYPE)
-#define mustBeType(TYPE)                       \
-  if (haveType(TYPE)) {                        \
-    addChild(*tokptr);                         \
-    next();                                    \
-  } else {                                     \
-    throwError("Parser Error", TYPE, *tokptr); \
-  }
-
-#define mustBeTypeSpecifier                          \
-  couldBe(keyword, "int") orCouldBe(keyword, "char") \
-      orCouldBe(keyword, "boolean") otherwiseMustBeType(identifier);
-#define mustBeReturnTypeSpecifier                              \
-  couldBe(keyword, "int") orCouldBe(keyword, "char")           \
-      orCouldBe(keyword, "boolean") orCouldBe(keyword, "void") \
-          otherwiseMustBeType(identifier);
-
-#define addChild(tok) self.children.emplace_back(tok);
-
-#define throwError(x...)
-#define mustBeOp                                                              \
-  if (tokptr->value == "+" || tokptr->value == "-" || tokptr->value == "*" || \
-      tokptr->value == "/" || tokptr->value == "<" || tokptr->value == ">" || \
-      tokptr->value == "=" || tokptr->value == "|" || tokptr->value == "&") { \
-    addChild(*tokptr);                                                        \
-    next();                                                                   \
-  } else {                                                                    \
-    except                                                                    \
-  }
+#include "../ParseTree.h"
 namespace Jack {
-
-ParseTree parseProgram(Token* tokptr) {
-  if (tokptr != nullptr) {
-    return parseClass(tokptr);
+#define OKAY()                                                        \
+  return ParserResult(ParserResult::ExitCode::okay, Token(), Token(), \
+                      tok->row, tok->col);
+#define ERROR(EXPECTEDVALUE, EXPECTEDTYPE, ERRORCODE)                      \
+  return ParserResult(                                                     \
+      ParserResult::ExitCode::ERRORCODE, std::move(*tok),                  \
+      Token{EXPECTEDVALUE, Token::Type::EXPECTEDTYPE, tok->row, tok->col}, \
+      tok->row, tok->col);
+#define COULD_BE(TYPE, VALUE)                                  \
+  if (tok->type == Token::Type::TYPE && tok->value == VALUE) { \
+    parent.children.emplace_back(*tok);                        \
+    if (++tok == end) {                                        \
+      ERROR(VALUE, TYPE, missing_token)                        \
+    }                                                          \
   }
-  throwError("Empty")
-}
-
-ParseTree parseClass(Token* tokptr) {
-  ParseTree self(ParseTreeType::Class);
-  mustBe(keyword, "class");
-  mustBeType(identifier);
-  mustBe(symbol, "{");
-  while (have(keyword, "field") | have(keyword, "static")) {
-    parseClassVarDec(self, tokptr);
+#define OTHERWISE_MUST_BE_TYPE(TYPE, msg) MUST_BE_TYPE(TYPE, msg)
+#define HAVE(TYPE, VALUE) \
+  (tok->type == Token::Type::TYPE && tok->value == VALUE)
+#define HAVE_TYPE(TYPE) (tok->type == Token::Type::TYPE)
+#define ADD(TYPE, VALUE)              \
+  parent.children.emplace_back(*tok); \
+  if (++tok == end) {                 \
+    ERROR(VALUE, TYPE, missing_token) \
   }
-  while (have(keyword, "constructor") | have(keyword, "function") |
-         have(keyword, "method")) {
-    parseSubroutine(self, tokptr);
+#define MUST_BE(TYPE, VALUE)                                   \
+  if (tok->type == Token::Type::TYPE && tok->value == VALUE) { \
+    ADD(TYPE, VALUE)                                           \
+  } else {                                                     \
+    ERROR(VALUE, TYPE, unexpected_token)                       \
   }
-}
-
-int parseClassVarDec(ParseTree& parent, Token*& tokptr) {
-  parent.children.emplace_back(ParseTreeType::ClassVarDec);
-  ParseTree& self = parent.children.back();
-  couldBe(keyword, "static") otherwiseMustBe(keyword, "field");
-  mustBeTypeSpecifier;
-  mustBeType(identifier);
-  while (have(symbol, ",")) {
-    mustBe(symbol, ",");
-    mustBeType(identifier);
+#define MUST_BE_TYPE(TYPE, msg)         \
+  if (tok->type == Token::Type::TYPE) { \
+    ADD(TYPE, msg)                      \
+  } else {                              \
+    ERROR(msg, TYPE, unexpected_token)  \
   }
-  mustBe(symbol, ";");
-}
-int parseSubroutine(ParseTree& parent, Token*& tokptr) {
-  parent.children.emplace_back(ParseTreeType::Subroutine);
-  ParseTree& self = parent.children.back();
-  couldBe(keyword, "constructor") orCouldBe(keyword, "method")
-      otherwiseMustBe(keyword, "function");
-  mustBeReturnTypeSpecifier;
-  mustBeType(identifier);
-  mustBe(symbol, "(");
-  parseParameterList(self, tokptr);
-  mustBe(symbol, ")");
-  mustBe(symbol, "{");
-  parseSubroutineBody(self, tokptr);
-  mustBe(symbol, "}");
-}
-
-int parseParameterList(ParseTree& parent, Token*& tokptr) {
-  parent.children.emplace_back(ParseTreeType::ParameterList);
-  ParseTree& self = parent.children.back();
-  couldBe(keyword, "int") orCouldBe(keyword, "char")
-      orCouldBe(keyword, "boolean") orCouldBeType(identifier)
-          otherwise(couldBe(keyword, "void") return 0;);
-  couldBeType(identifier);
-  while (have(symbol, ",")) {
-    mustBe(symbol, ",");
-    couldBe(keyword, "int") orCouldBe(keyword, "char")
-        orCouldBe(keyword, "boolean") otherwiseMustBeType(identifier);
-    mustBeType(identifier);
+#define PARSE(TYPE)                                                       \
+  parent.children.emplace_back(ParseTree::Type::TYPE);                    \
+  ParserResult Res##TYPE = parse##TYPE(parent.children.back(), tok, end); \
+  if (Res##TYPE.exit_code != ParserResult::ExitCode::okay) {              \
+    return Res##TYPE;                                                     \
   }
-  return 0;
+ParserResult::ParserResult(ParserResult::ExitCode exit_code, ParseTree&& pt,
+                           size_t line, size_t col)
+    : exit_code(exit_code),
+      abstractSyntaxTree(std::move(pt)),
+      problemToken(),
+      wantedToken(),
+      exit_line(line),
+      exit_col(col) {
+  ;
 }
 
-int parseSubroutineBody(ParseTree& parent, Token*& tokptr) {
-  parent.children.emplace_back(ParseTreeType::SubroutineBody);
-  ParseTree& self = parent.children.back();
-  while (have(keyword, "var")) {
-    parseVarDec(self, tokptr);
+ParserResult::ParserResult(ParserResult::ExitCode exit_code, const Token& tok,
+                           const Token& expected, size_t line, size_t col)
+    : exit_code(exit_code),
+      abstractSyntaxTree(Token{"", Token::Type::None, 0, 0}),
+      problemToken(tok),
+      wantedToken(expected),
+      exit_line(line),
+      exit_col(col) {}
+
+ParserResult parseClass(ParseTree& parent,
+                        std::vector<Token>::const_iterator& tok,
+                        std::vector<Token>::const_iterator const end) {
+  MUST_BE(Keyword, "class")
+  MUST_BE_TYPE(Identifier, "class name")
+  MUST_BE(Symbol, "{")
+  while (HAVE(Keyword, "field") || HAVE(Keyword, "static")) {
+    PARSE(ClassVarDec)
   }
-  parseStatements(self, tokptr);
-}
-
-int parseVarDec(ParseTree& parent, Token*& tokptr) {
-  parent.children.emplace_back(ParseTreeType::VarDec);
-  ParseTree& self = parent.children.back();
-  mustBe(keyword, "var");
-  mustBeTypeSpecifier;
-  mustBeType(identifier);
-  while (have(symbol, ",")) {
-    mustBe(symbol, ",");
-    mustBeType(identifier);
+  while (HAVE(Keyword, "constructor") || HAVE(Keyword, "function") ||
+         HAVE(Keyword, "method")) {
+    PARSE(Subroutine)
   }
-  mustBe(symbol, ";");
+  MUST_BE(Symbol, "}")
+  OKAY()
 }
 
-int parseStatements(ParseTree& parent, Token*& tokptr) {
-  parent.children.emplace_back(ParseTreeType::Statements);
-  ParseTree& self = parent.children.back();
-}
-
-int parseLetStatement(ParseTree& parent, Token*& tokptr) {
-  parent.children.emplace_back(ParseTreeType::LetStatement);
-  ParseTree& self = parent.children.back();
-  mustBe(keyword, "let");
-  mustBeType(identifier);
-  if (have(symbol, "[")) {
-    mustBe(symbol, "[");
-    parseExpression(self, tokptr);
-    mustBe(symbol, "]");
+ParserResult parseClassVarDec(ParseTree& parent,
+                              std::vector<Token>::const_iterator& tok,
+                              std::vector<Token>::const_iterator const end) {
+  COULD_BE(Keyword, "field")
+  else MUST_BE(Keyword, "static");
+  COULD_BE(Keyword, "int")
+  else COULD_BE(Keyword, "char") else COULD_BE(
+      Keyword, "boolean") else MUST_BE_TYPE(Identifier, "type specifier");
+  MUST_BE_TYPE(Identifier, "variable name")
+  while (HAVE(Symbol, ",")) {
+    MUST_BE(Symbol, ",")
+    MUST_BE_TYPE(Identifier, "variable name")
   }
-  mustBe(symbol, "=");
-  parseExpression(self, tokptr);
-  mustBe(symbol, ";");
+  MUST_BE(Symbol, ";")
+  OKAY()
 }
 
-int parseDoStatement(ParseTree& parent, Token*& tokptr) {
-  parent.children.emplace_back(ParseTreeType::DoStatement);
-  ParseTree& self = parent.children.back();
-  mustBe(keyword, "do");
-  parseExpression(self, tokptr);
-  mustBe(symbol, ";");
+ParserResult parseSubroutine(ParseTree& parent,
+                             std::vector<Token>::const_iterator& tok,
+                             std::vector<Token>::const_iterator const end) {
+  COULD_BE(Keyword, "constructor")
+  else COULD_BE(Keyword, "method") else MUST_BE(Keyword, "function");
+  COULD_BE(Keyword, "int")
+  else COULD_BE(Keyword, "char") else COULD_BE(
+      Keyword,
+      "boolean") else COULD_BE(Keyword,
+                               "void") else MUST_BE_TYPE(Identifier,
+                                                         "type specifier");
+  MUST_BE_TYPE(Identifier, "function name")
+  MUST_BE(Symbol, "(")
+  PARSE(ParameterList)
+  MUST_BE(Symbol, ")")
+  MUST_BE(Symbol, "{")
+  PARSE(SubroutineBody)
+  MUST_BE(Symbol, "}")
+  OKAY()
 }
 
-int parseIfStatement(ParseTree& parent, Token*& tokptr) {
-  parent.children.emplace_back(ParseTreeType::IfStatement);
-  ParseTree& self = parent.children.back();
-  mustBe(keyword, "if");
-  mustBe(symbol, "(");
-  parseExpression(self, tokptr);
-  mustBe(symbol, ")");
-  mustBe(symbol, "{");
-  parseStatements(self, tokptr);
-  mustBe(symbol, "}");
-  if (have(keyword, "else")) {
-    mustBe(keyword, "else");
-    mustBe(symbol, "{");
-    parseStatements(self, tokptr);
-    mustBe(symbol, "}");
+ParserResult parseParameterList(ParseTree& parent,
+                                std::vector<Token>::const_iterator& tok,
+                                std::vector<Token>::const_iterator const end) {
+  if (!HAVE(Symbol, ")")) {
+    COULD_BE(Keyword, "int")
+    else COULD_BE(Keyword, "char") else COULD_BE(
+        Keyword, "boolean") else MUST_BE_TYPE(Identifier, "type specifier");
+    MUST_BE_TYPE(Identifier, "argument name")
   }
-}
-
-int parseWhileStatement(ParseTree& parent, Token*& tokptr) {
-  parent.children.emplace_back(ParseTreeType::WhileStatement);
-  ParseTree& self = parent.children.back();
-  mustBe(keyword, "while");
-  mustBe(symbol, "(");
-  parseExpression(self, tokptr);
-  mustBe(symbol, ")");
-  mustBe(symbol, "{");
-  parseStatements(self, tokptr);
-  mustBe(symbol, "}");
-}
-
-int parseReturnStatement(ParseTree& parent, Token*& tokptr) {
-  parent.children.emplace_back(ParseTreeType::ReturnStatement);
-  ParseTree& self = parent.children.back();
-  mustBe(keyword, "return");
-  parseExpression(self, tokptr);
-  mustBe(symbol, ";")
-}
-
-int parseExpression(ParseTree& parent, Token*& tokptr) {
-  parent.children.emplace_back(ParseTreeType::Expression);
-  ParseTree& self = parent.children.back();
-  parseTerm(self, tokptr);
-  if (haveType(symbol)) {
-    mustBeOp;
-    parseTerm(self, tokptr);
+  while (HAVE(Symbol, ",")) {
+    MUST_BE(Symbol, ",")
+    COULD_BE(Keyword, "int")
+    else COULD_BE(Keyword, "char") else COULD_BE(
+        Keyword, "boolean") else MUST_BE_TYPE(Identifier, "type specifier");
+    MUST_BE_TYPE(Identifier, "argument name")
   }
+  OKAY()
 }
 
-int parseExpressionList(ParseTree& parent, Token*& tokptr) {
-  parent.children.emplace_back(ParseTreeType::ExpressionList);
-  ParseTree& self = parent.children.back();
-  parseExpression(self, tokptr);
-  while (have(symbol, ",")) {
-    mustBe(symbol, ",");
-    parseExpression(self, tokptr);
+ParserResult parseSubroutineBody(ParseTree& parent,
+                                 std::vector<Token>::const_iterator& tok,
+                                 std::vector<Token>::const_iterator const end) {
+  while (HAVE(Keyword, "var")) {
+    PARSE(VarDec)
   }
+  PARSE(Statements)
+  OKAY()
 }
 
-int parseTerm(ParseTree& parent, Token*& tokptr) {
-  parent.children.emplace_back(ParseTreeType::Term);
-  ParseTree& self = parent.children.back();
-  switch (tokptr->type) {
-    case intConstant:
-      mustBeType(intConstant);
+ParserResult parseVarDec(ParseTree& parent,
+                         std::vector<Token>::const_iterator& tok,
+                         std::vector<Token>::const_iterator const end) {
+  MUST_BE(Keyword, "var");
+  COULD_BE(Keyword, "int")
+  else COULD_BE(Keyword, "char") else COULD_BE(
+      Keyword, "boolean") else MUST_BE_TYPE(Identifier, "type specifier");
+
+  while (HAVE(Symbol, ",")) {
+    MUST_BE(Symbol, ",") MUST_BE_TYPE(Identifier, "variable name")
+  }
+  MUST_BE(Symbol, ";") OKAY()
+}
+
+ParserResult parseStatements(ParseTree& parent,
+                             std::vector<Token>::const_iterator& tok,
+                             std::vector<Token>::const_iterator const end) {
+  while (!HAVE(Symbol, "}")) {
+    if (HAVE(Keyword, "let")) {
+      PARSE(LetStatement);
+    } else if (HAVE(Keyword, "do")) {
+      PARSE(DoStatement);
+    } else if (HAVE(Keyword, "if")) {
+      PARSE(IfStatement);
+    } else if (HAVE(Keyword, "while")) {
+      PARSE(WhileStatement);
+    } else if (HAVE(Keyword, "return")) {
+      PARSE(ReturnStatement);
+    } else {
+      ERROR("statement type", Keyword, unexpected_token)
+    }
+  }
+  OKAY();
+}
+
+ParserResult parseLetStatement(ParseTree& parent,
+                               std::vector<Token>::const_iterator& tok,
+                               std::vector<Token>::const_iterator const end) {
+  MUST_BE(Keyword, "let");
+  MUST_BE_TYPE(Identifier, "variable name");
+  if (HAVE(Symbol, "[")) {
+    MUST_BE(Symbol, "[");
+    PARSE(Expression)
+    MUST_BE(Symbol, "]");
+  }
+  MUST_BE(Symbol, "=")
+  PARSE(Expression)
+  MUST_BE(Symbol, ";")
+  OKAY()
+}
+ParserResult parseDoStatement(ParseTree& parent,
+                              std::vector<Token>::const_iterator& tok,
+                              std::vector<Token>::const_iterator const end) {
+  MUST_BE(Keyword, "do");
+  PARSE(Expression);
+  MUST_BE(Symbol, ";");
+  OKAY();
+}
+ParserResult parseIfStatement(ParseTree& parent,
+                              std::vector<Token>::const_iterator& tok,
+                              std::vector<Token>::const_iterator const end) {
+  MUST_BE(Keyword, "if");
+  MUST_BE(Symbol, "(");
+  PARSE(Expression)
+  MUST_BE(Symbol, ")");
+  MUST_BE(Symbol, "{")
+  PARSE(Statements)
+  MUST_BE(Symbol, "}")
+  if (HAVE(Keyword, "else")) {
+    MUST_BE(Keyword, "else");
+    MUST_BE(Symbol, "{")
+    PARSE(Statements)
+    MUST_BE(Symbol, "}")
+  }
+  OKAY()
+}
+ParserResult parseWhileStatement(ParseTree& parent,
+                                 std::vector<Token>::const_iterator& tok,
+                                 std::vector<Token>::const_iterator const end) {
+  MUST_BE(Keyword, "while");
+  MUST_BE(Symbol, "(");
+  PARSE(Expression)
+  MUST_BE(Symbol, ")");
+  MUST_BE(Symbol, "{")
+  PARSE(Statements)
+  MUST_BE(Symbol, "}")
+  OKAY()
+}
+ParserResult parseReturnStatement(
+    ParseTree& parent, std::vector<Token>::const_iterator& tok,
+    std::vector<Token>::const_iterator const end) {
+  MUST_BE(Keyword, "return");
+  PARSE(Expression);
+  MUST_BE(Symbol, ";");
+  OKAY();
+}
+ParserResult parseExpression(ParseTree& parent,
+                             std::vector<Token>::const_iterator& tok,
+                             std::vector<Token>::const_iterator const end) {
+  PARSE(Term);
+  while (tok->value == "+" || tok->value == "-" || tok->value == "*" ||
+         tok->value == "/" || tok->value == "&" || tok->value == "|" ||
+         tok->value == "=" || tok->value == "<" || tok->value == ">") {
+    ADD(Symbol, "operation")
+    PARSE(Term);
+  }
+  OKAY();
+}
+
+ParserResult parseExpressionList(ParseTree& parent,
+                                 std::vector<Token>::const_iterator& tok,
+                                 std::vector<Token>::const_iterator const end) {
+  PARSE(Expression);
+  while (HAVE(Symbol, ",")) {
+    MUST_BE(Symbol, ",");
+    PARSE(Expression);
+  }
+  OKAY();
+}
+
+ParserResult parseTerm(ParseTree& parent,
+                       std::vector<Token>::const_iterator& tok,
+                       std::vector<Token>::const_iterator const end) {
+  switch (tok->type) {
+    case Token::Type::Number:
+      MUST_BE_TYPE(Number, "integer constant");
       break;
-    case stringConstant:
-      mustBeType(intConstant);
+    case Token::Type::String:
+      MUST_BE_TYPE(String, "string constant");
       break;
-    case keyword:
-      couldBe(keyword, "this") orCouldBe(keyword, "null")
-          orCouldBe(keyword, "true") otherwiseMustBe(keyword, "false");
+    case Token::Type::Keyword:
+      COULD_BE(Keyword, "true")
+      else COULD_BE(Keyword, "false") else COULD_BE(
+          Keyword, "null") else MUST_BE(Keyword, "this");
       break;
-    case symbol:
-      if (have(symbol, "(")) {
-        mustBe(symbol, "(");
-        parseExpression(self, tokptr);
-        mustBe(symbol, ")");
-        break;
+    case Token::Type::Symbol:
+      if (HAVE(Symbol, "(")) {
+        MUST_BE(Symbol, "(");
+        PARSE(Expression);
+        MUST_BE(Symbol, ")");
+      } else {
+        COULD_BE(Symbol, "-") else MUST_BE(Symbol, "~");
+        PARSE(Term);
       }
-      couldBe(symbol, "-") orCouldBe(symbol, "~");
-      parseTerm(self, tokptr);
       break;
-    case identifier:
-      mustBeType(identifier);
-      if (have(symbol, ".")) {
-        mustBe(symbol, ".");
-        mustBeType(identifier);
+    case Token::Type::Identifier:
+      MUST_BE_TYPE(Identifier, "variable name");
+      if (HAVE(Symbol, "[")) {
+        MUST_BE(Symbol, "[");
+        PARSE(Expression);
+        MUST_BE(Symbol, "]");
+      } else if (HAVE(Symbol, "(")) {
+        MUST_BE(Symbol, "(");
+        PARSE(ExpressionList);
+        MUST_BE(Symbol, ")");
       }
-      if (have(symbol, "(")) {
-        mustBe(symbol, "(");
-        parseExpressionList(self, tokptr);
-        mustBe(symbol, ")");
+      if (HAVE(Symbol, ".")) {
+        MUST_BE(Symbol, ".");
+        MUST_BE_TYPE(Identifier, "function name");
+        MUST_BE(Symbol, "(");
+        PARSE(ExpressionList);
+        MUST_BE(Symbol, ")");
       }
-      if (have(symbol, "[")) {
-        mustBe(symbol, "[");
-        parseExpression(self, tokptr);
-        mustBe(symbol, "]");
-      }
+      break;
+    default:
+      ERROR("expected expression", Identifier, unexpected_token);
       break;
   }
+  OKAY();
 }
 
-ParseTree parse(std::vector<Token>& tokens) {
-  if (tokens.empty()) {
-    except;
+ParserResult parse(const std::vector<Token>& tokens) {
+  ParseTree parsedTree(ParseTree::Type::Class);
+  std::vector<Token>::const_iterator tok = tokens.cbegin();
+  std::vector<Token>::const_iterator const end = tokens.cend();
+  ParserResult res = parseClass(parsedTree, tok, end);
+  if (res.exit_code != ParserResult::ExitCode::okay) {
+    return res;
   }
-  return parseProgram(tokens.data());
+
+  if (tok != end && tok->type != Token::Type::None) {
+    return ParserResult(
+        ParserResult::ExitCode::unexpected_token, std::move(*tok),
+        Token{"", Token::Type::None, tok->row, tok->col}, tok->row, tok->col);
+  }
+  return ParserResult(ParserResult::ExitCode::okay, std::move(parsedTree),
+                      tok->row, tok->col);
 }
 }  // namespace Jack
