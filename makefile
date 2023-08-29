@@ -10,7 +10,7 @@ SOURCES = $(wildcard $(SRCDIR)/*.cpp)
 OBJECTS = $(patsubst $(SRCDIR)/%.cpp,$(OBJDIR)/%.o,$(SOURCES))
 
 # Output binary name
-TARGET = Jack.o
+TARGET = Jack
 
 # Debug build settings
 DEBUG_CXXFLAGS = $(CXXFLAGS) -g -DDEBUG
