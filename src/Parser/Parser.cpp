@@ -16,7 +16,7 @@ namespace Jack {
 
 #define COULD_BE(TYPE, VALUE)                                  \
   if (tok->type == Token::Type::TYPE && tok->value == VALUE) { \
-    parent.children.emplace_back(*tok);                        \
+    parent.addChild(*tok);                                     \
     if (++tok == end) {                                        \
       ERROR(VALUE, TYPE, missing_token)                        \
     }                                                          \
@@ -28,7 +28,7 @@ namespace Jack {
 #define HAVE_TYPE(TYPE) (tok->type == Token::Type::TYPE)
 
 #define ADD(TYPE, VALUE)              \
-  parent.children.emplace_back(*tok); \
+  parent.addChild(*tok);              \
   if (++tok == end) {                 \
     ERROR(VALUE, TYPE, missing_token) \
   }
@@ -47,13 +47,13 @@ namespace Jack {
     ERROR(msg, TYPE, unexpected_token)  \
   }
 
-#define PARSE(TYPE)                                                       \
-  parent.children.emplace_back(ParseTree::Type::TYPE);                    \
-  ParserResult Res##TYPE = parse##TYPE(parent.children.back(), tok, end); \
-  if (Res##TYPE.exit_code != ParserResult::ExitCode::okay) {              \
-    return Res##TYPE;                                                     \
+#define PARSE(TYPE)                                                  \
+  ParserResult Res##TYPE =                                           \
+      parse##TYPE(parent.addChild(ParseTree::Type::TYPE), tok, end); \
+  if (Res##TYPE.exit_code != ParserResult::ExitCode::okay) {         \
+    return Res##TYPE;                                                \
   }
-  
+
 ParserResult::ParserResult(ParserResult::ExitCode exit_code, ParseTree&& pt,
                            size_t line, size_t col)
     : exit_code(exit_code),

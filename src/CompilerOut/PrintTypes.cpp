@@ -102,17 +102,17 @@ std::string to_string(const Jack::ParseTree& parseTree, int indent = 0) {
   std::string result;
 
   // Print the token information if available
-  if (!parseTree.tok.value.empty()) {
-    result += std::string(indent, ' ') + '\"' + parseTree.tok.value + "\"";
+  if (!parseTree.getValue().empty()) {
+    result += std::string(indent, ' ') + '\"' + parseTree.getValue() + "\"";
   } else {
     // Print the type of the node
     result +=
-        std::string(indent, ' ') + Jack::to_string(parseTree.type) + ": [\n";
+        std::string(indent, ' ') + Jack::to_string(parseTree.getType()) + ": [\n";
     // Recursively process child nodes
-    for (auto child = parseTree.children.begin();
-         child < parseTree.children.end(); child++) {
+    for (auto child = parseTree.getChildren().cbegin();
+         child < parseTree.getChildren().cend(); child++) {
       result += to_string(*child, indent + 2);
-      if (child + 1 < parseTree.children.end()) {
+      if (child + 1 < parseTree.getChildren().cend()) {
         result += ",\n";
       } else {
         result += "]";

@@ -1,6 +1,5 @@
 Add proper implementation of compiler error handlers with clear messages
 Improve ParseTree to_string() function
-Split JackTypes.cpp into Token.cpp and ParseTree.cpp
 ...
 Implement SymbolTable Generation
 Implement ExpressionTree Generation.

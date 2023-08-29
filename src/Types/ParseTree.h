@@ -31,15 +31,26 @@ struct ParseTree {
     String,
     Symbol
   };
-  Type type;
+
+ private:
+  const Type type;
   std::vector<ParseTree> children;
   Token tok;
+
+ public:
   ParseTree(const Token&);
   ParseTree(ParseTree::Type);
   ParseTree(const ParseTree&);
   ParseTree(ParseTree&&);
-  ParseTree& operator=(const ParseTree&);
-  ParseTree& operator=(ParseTree&&);
+
+  ParseTree& addChild(ParseTree::Type);
+  ParseTree& addChild(const Token&);
+
+  const std::vector<ParseTree>& getChildren() const;
+  const std::string& getValue() const;
+  size_t getLine() const;
+  size_t getCol() const;
+  ParseTree::Type getType() const;
 };
 
 }  // namespace Jack
