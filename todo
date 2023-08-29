@@ -1,0 +1,12 @@
+Add proper implementation of compiler error handlers with clear messages
+Improve ParseTree to_string() function
+Split JackTypes.cpp into Token.cpp and ParseTree.cpp
+...
+Implement SymbolTable Generation
+Implement ExpressionTree Generation.
+Implement Code Generation.
+Implement File loading.
+Implement linking of compiled files.
+Implement Hack Emulator to interpret
+Implement standard library
+  find an allocator to use for alloc and deAlloc
