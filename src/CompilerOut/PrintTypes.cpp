@@ -1,7 +1,5 @@
 #include "PrintTypes.h"
 
-#include "../Types/ParseTree.h"
-
 namespace Jack {
 
 std::string to_string(Jack::Token::Type type) {

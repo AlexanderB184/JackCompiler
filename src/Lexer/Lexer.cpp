@@ -35,12 +35,12 @@ namespace Jack {
 
 // Adds a token to 'tokens' and resets the State, jumping to GETTYPE
 #define addToken(type)                                   \
-  tokens.emplace_back(std::move(word), type, line, col); \
+  tokens.emplace_back(std::move(word), type, tok_line, tok_col); \
   resetState;
 
 // Adds a token to 'tokens' without reseting the State
 #define addTokenEndOfFile(type) \
-  tokens.emplace_back(std::move(word), type, line, col);
+  tokens.emplace_back(std::move(word), type, tok_line, tok_col);
 
 // Creates the lexerResult struct with the correct fields and returns it, ending
 // the function.
@@ -78,7 +78,6 @@ LexerResult tokenize(string const& script) {
   lexerState STATE = lexerState::UNKNOWN;
   char curr_char, next_char;
   std::string word;
-
 GETTYPE:
   while (*it) {
   CHECKENDCOND:
@@ -145,6 +144,7 @@ GETTYPE:
           addTokenEndOfFile(Token::Type::Invalid);
           exit(LexerResult::ExitCode::unclosed_quotes);
         }
+        break;
       case lexerState::LINECOMMENT:
         if (linebreak(curr_char)) {
           resetState;
