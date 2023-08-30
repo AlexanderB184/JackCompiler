@@ -2,13 +2,14 @@
 #include <iostream>
 #include <vector>
 
-#include "../Types/Token.h"
-#include "../Types/ParseTree.h"
+#include "../ParseTree/ParseTree.h"
+#include "../SymbolTable/SymbolTable.h"
+#include "../Token/Token.h"
 
 namespace Jack {
 
 std::string to_string(Jack::ParseTree::Type);
-std::string to_string(const Jack::ParseTree&,int);
+std::string to_string(const Jack::ParseTree&, int);
 std::string to_string(Jack::Token::Type);
 std::string to_string(const Jack::Token&);
 std::string to_string(const std::vector<Jack::Token>&);

@@ -1,10 +1,9 @@
 #pragma once
 
 #include <string>
-#include <unordered_set>
 #include <vector>
 
-#include "Token.h"
+#include "../Token/Token.h"
 
 namespace Jack {
 
@@ -48,6 +47,7 @@ struct ParseTree {
 
   const std::vector<ParseTree>& getChildren() const;
   const std::string& getValue() const;
+  const Token& getToken() const;
   size_t getLine() const;
   size_t getCol() const;
   ParseTree::Type getType() const;

@@ -1,6 +1,5 @@
 #include "Lexer.h"
 
-#include "../CompileError/Error.h"
 #include "LexerTokenClassification.h"
 
 using std::string;
@@ -34,7 +33,7 @@ namespace Jack {
   goto GETTYPE;
 
 // Adds a token to 'tokens' and resets the State, jumping to GETTYPE
-#define addToken(type)                                   \
+#define addToken(type)                                           \
   tokens.emplace_back(std::move(word), type, tok_line, tok_col); \
   resetState;
 

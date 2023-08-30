@@ -3,7 +3,7 @@
 #include <string>
 #include <vector>
 
-#include "../Types/Token.h"
+#include "../Token/Token.h"
 
 namespace Jack {
 

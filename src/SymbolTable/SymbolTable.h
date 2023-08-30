@@ -4,6 +4,8 @@
 #include <string>
 #include <unordered_map>
 
+#include "../ParseTree/ParseTree.h"
+
 namespace Jack {
 
 struct Symbol {
@@ -13,6 +15,12 @@ struct Symbol {
   uint16_t offset;
   Symbol(const std::string&, const std::string&, MemorySegment, uint16_t);
   Symbol();
+};
+
+struct TableBuildResult {
+  enum class ExitCode { okay, duplicate_symbol } exit_code;
+  std::string duplicate_symbol_name;
+  size_t exit_line, exit_col;
 };
 
 /**
@@ -36,14 +44,31 @@ class SymbolTable {
   SymbolTable& operator=(const SymbolTable&);
   SymbolTable& operator=(SymbolTable&&);
 
-  Symbol& insert(const Symbol&);
-  Symbol& insert(Symbol&&);
-  Symbol& insert(std::string const&, std::string const&, Symbol::MemorySegment);
+  bool insert(const Symbol&);
+  bool insert(Symbol&&);
+  bool insert(std::string const&, std::string const&, Symbol::MemorySegment);
+
   bool contains(const std::string&) const;
+
   const Symbol& get(const std::string&) const;
-  
+
+  TableBuildResult addFromClass(const ParseTree&);
+  TableBuildResult addFromSubroutine(const ParseTree&);
+  TableBuildResult addFromSubroutineBody(const ParseTree&);
+  TableBuildResult addFromVarDec(const ParseTree&);
+  TableBuildResult addFromParamList(const ParseTree&);
+
+  // methods to get memory segment sizes
+
+  uint16_t getStaticCount();
+  uint16_t getFieldCount();
+  uint16_t getArgCount();
+  uint16_t getVarCount();
 };
 
 uint16_t SymbolTable::nStatics = 0;
+
+TableBuildResult buildSymbolTables(std::vector<SymbolTable>&,
+                                      const ParseTree&);
 
 }  // namespace Jack

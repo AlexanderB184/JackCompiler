@@ -33,15 +33,17 @@ SymbolTable& SymbolTable::operator=(SymbolTable&& rhs) {
   return *this;
 }
 
-Symbol& SymbolTable::insert(const Symbol& symbol) {
-  return table.insert(std::make_pair(symbol.name, symbol)).first->second;
+bool SymbolTable::insert(const Symbol& symbol) {
+  if (contains(symbol.name)) return false;
+  return table.insert(std::make_pair(symbol.name, symbol)).second;
 }
-Symbol& SymbolTable::insert(Symbol&& symbol) {
-  return table.insert(std::make_pair(symbol.name, std::move(symbol)))
-      .first->second;
+bool SymbolTable::insert(Symbol&& symbol) {
+  if (contains(symbol.name)) return false;
+  return table.insert(std::make_pair(symbol.name, std::move(symbol))).second;
 }
-Symbol& SymbolTable::insert(std::string const& name, std::string const& type,
-                            Symbol::MemorySegment segment) {
+bool SymbolTable::insert(std::string const& name, std::string const& type,
+                         Symbol::MemorySegment segment) {
+  if (contains(name)) return false;
   uint16_t offset;
   switch (segment) {
     case Symbol::MemorySegment::Static:
@@ -59,10 +61,8 @@ Symbol& SymbolTable::insert(std::string const& name, std::string const& type,
     default:
       break;  // UNREACHABLE
   }
-  return table
-      .emplace(std::piecewise_construct, std::forward_as_tuple(name),
-               std::forward_as_tuple(name, type, segment, offset))
-      .first->second;
+  return table.emplace(std::piecewise_construct, std::forward_as_tuple(name),
+                       std::forward_as_tuple(name, type, segment, offset)).second;
 }
 
 bool SymbolTable::contains(std::string const& symbol) const {

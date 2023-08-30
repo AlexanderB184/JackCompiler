@@ -2,8 +2,8 @@
 
 #include <vector>
 
-#include "../Types/Token.h"
-#include "../Types/ParseTree.h"
+#include "../Token/Token.h"
+#include "../ParseTree/ParseTree.h"
 
 namespace Jack {
 

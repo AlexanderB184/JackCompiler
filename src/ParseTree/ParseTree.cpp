@@ -31,4 +31,5 @@ const std::string& ParseTree::getValue() const { return tok.value; }
 size_t ParseTree::getLine() const { return tok.row; }
 size_t ParseTree::getCol() const { return tok.col; }
 ParseTree::Type ParseTree::getType() const { return type; }
+const Token& ParseTree::getToken() const { return tok; }
 }  // namespace Jack
