@@ -9,17 +9,6 @@ typedef string::const_iterator iter_t;
 
 namespace Jack {
 
-// Resets the column and increments the line number
-#define newline \
-  col = 0;      \
-  line++;
-
-// increments the iterator and adds the character to word
-#define next   \
-  word += *it; \
-  col++;       \
-  it++;
-
 // skips n chars in the script, doesn't add them to word
 
 #define skip(n) \
@@ -45,9 +34,6 @@ namespace Jack {
 // the function.
 #define exit(exit_code) \
   return LexerResult(exit_code, std::move(tokens), line, col);
-
-// Set of Jack Reserved Words
-static std::unordered_set<string> keywords(_KEYWORDS);
 
 // Enum for possible states the state machine in tokenize can take
 enum class lexerState {
@@ -109,9 +95,9 @@ GETTYPE:
         } else if (symbol(curr_char)) {
           STATE = lexerState::SYMBOL;
         } else {
-          next;
-          addTokenEndOfFile(Token::Type::Invalid);
-          exit(LexerResult::ExitCode::unknown_symbol);
+          tokens.emplace_back(*it, Token::Type::Invalid, tok_line, tok_col);
+          return LexerResult(LexerResult::ExitCode::unknown_symbol,
+                             std::move(tokens), line, col);
         }
         tok_start = it;
         tok_line = line;
@@ -160,11 +146,15 @@ GETTYPE:
           resetState;
         };
         if (linebreak(curr_char)) {
-          newline;
+          col = 0;
+          line++;
         }
         break;
     }  // switch(STATE)
-    next;
+    // next
+    word += *it;
+    col++;
+    it++;
   }  // while(*it)
   switch (STATE) {
     case lexerState::WORD:
