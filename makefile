@@ -23,10 +23,12 @@ RELEASE_TARGET = $(BINDIR)/$(TARGET:.o=_release.o)
 SOURCES = \
     $(SRCDIR)/Parser/Parser.cpp \
     $(SRCDIR)/Lexer/Lexer.cpp \
-    $(SRCDIR)/Types/ParseTree.cpp \
-    $(SRCDIR)/Types/Token.cpp \
+    $(SRCDIR)/ParseTree/ParseTree.cpp \
+    $(SRCDIR)/Token/Token.cpp \
     $(SRCDIR)/main.cpp \
-    $(SRCDIR)/CompilerOut/PrintTypes.cpp
+    $(SRCDIR)/CompilerOut/PrintTypes.cpp \
+	$(SRCDIR)/SymbolTable/SymbolTable.cpp \
+	$(SRCDIR)/SymbolTable/SymbolTableBuilder.cpp
 
 .PHONY: all clean
 

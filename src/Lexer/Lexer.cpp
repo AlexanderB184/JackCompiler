@@ -95,7 +95,7 @@ GETTYPE:
         } else if (symbol(curr_char)) {
           STATE = lexerState::SYMBOL;
         } else {
-          tokens.emplace_back(*it, Token::Type::Invalid, tok_line, tok_col);
+          tokens.emplace_back(std::string()+*it, Token::Type::Invalid, tok_line, tok_col);
           return LexerResult(LexerResult::ExitCode::unknown_symbol,
                              std::move(tokens), line, col);
         }

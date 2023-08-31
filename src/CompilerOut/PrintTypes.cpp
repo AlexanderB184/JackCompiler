@@ -106,8 +106,8 @@ std::string to_string(const Jack::ParseTree& parseTree, int indent = 0) {
     result += std::string(indent, ' ') + '\"' + parseTree.getValue() + "\"";
   } else {
     // Print the type of the node
-    result +=
-        std::string(indent, ' ') + Jack::to_string(parseTree.getType()) + ": [\n";
+    result += std::string(indent, ' ') + Jack::to_string(parseTree.getType()) +
+              ": [\n";
     // Recursively process child nodes
     for (auto child = parseTree.getChildren().cbegin();
          child < parseTree.getChildren().cend(); child++) {
@@ -129,6 +129,49 @@ std::ostream& operator<<(std::ostream& o, const Jack::ParseTree& pt) {
 }
 std::ostream& operator<<(std::ostream& o, Jack::ParseTree::Type type) {
   o << to_string(type);
+  return o;
+}
+
+std::string to_string(const SymbolTable& table) {
+  std::string out = "[ ";
+  std::unordered_map<std::string, Jack::Symbol>::const_iterator it = table.cbegin();
+  while (it != table.cend()) {
+    out += to_string(it->second) + ", ";
+    it++;
+  }
+  return out + " ]";
+}
+std::string to_string(const Symbol& symbol) {
+  return "{ " + symbol.name + ", " + symbol.type + ", " +
+         to_string(symbol.segment) + ", " + std::to_string((int)symbol.offset) +
+         " }";
+}
+std::string to_string(const Symbol::MemorySegment& segment) {
+  switch (segment) {
+    case Jack::Symbol::MemorySegment::Local:
+      return "Local";
+    case Jack::Symbol::MemorySegment::Argument:
+      return "Argument";
+    case Jack::Symbol::MemorySegment::Field:
+      return "Field";
+    case Jack::Symbol::MemorySegment::Static:
+      return "Static";
+    default:
+      return "Unreachable";
+  }
+}
+
+std::ostream& operator<<(std::ostream& o, const SymbolTable& table) {
+  o << to_string(table);
+  return o;
+}
+std::ostream& operator<<(std::ostream& o, const Symbol& symbol) {
+  o << to_string(symbol);
+  return o;
+}
+std::ostream& operator<<(std::ostream& o,
+                         const Symbol::MemorySegment& segment) {
+  o << to_string(segment);
   return o;
 }
 

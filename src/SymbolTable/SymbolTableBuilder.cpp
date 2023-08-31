@@ -1,5 +1,4 @@
 #include "SymbolTable.h"
-
 namespace Jack {
 
 #define OKAY() \
@@ -12,12 +11,16 @@ typedef std::vector<ParseTree>::const_iterator iterator_t;
 
 TableBuildResult buildSymbolTables(std::vector<SymbolTable>& tables,
                                    const ParseTree& tree) {
-  tables.emplace_back();
   const std::vector<ParseTree>& classBody = tree.getChildren();
-  iterator_t it =
-      classBody.cbegin() + 3;  // Start after 'class' 'name' '{' ... <== here
+  iterator_t it = classBody.cbegin() + 1;  // Start on class name;
   const iterator_t end = classBody.cend();
+  if (it >= end) {
+    ERROR();
+  }
+  tables.emplace_back(it->getValue());
   SymbolTable& classTable = tables.back();
+
+  it += 2;
   while (it < end && it->getType() == ParseTree::Type::ClassVarDec) {
     TableBuildResult res = classTable.addFromVarDec(*it);
     if (res.exit_code != TableBuildResult::ExitCode::okay) return res;
@@ -35,12 +38,24 @@ TableBuildResult buildSymbolTables(std::vector<SymbolTable>& tables,
 
 TableBuildResult SymbolTable::addFromSubroutine(const ParseTree& root) {
   const std::vector<ParseTree>& subroutine = root.getChildren();
-  iterator_t it = subroutine.cbegin() + 4;
+  iterator_t it = subroutine.cbegin();
   iterator_t const end = subroutine.cend();
+  if (it->getValue() == "method") {
+    if (!insert("this", owner, Symbol::MemorySegment::Argument)) {
+      ERROR();
+    }
+  }
+  it += 4;
+  if (it >= end) {
+    ERROR();
+  }
   TableBuildResult res = addFromParamList(*it);
   if (res.exit_code != TableBuildResult::ExitCode::okay) return res;
-  it += 4;
-  TableBuildResult res = addFromSubroutineBody(*it);
+  it += 3;
+  if (it >= end) {
+    ERROR();
+  }
+  res = addFromSubroutineBody(*it);
   if (res.exit_code != TableBuildResult::ExitCode::okay) return res;
   OKAY();
 }
@@ -70,6 +85,9 @@ TableBuildResult SymbolTable::addFromVarDec(const ParseTree& root) {
     segment = Symbol::MemorySegment::Static;
   }
   it++;
+  if (it >= end) {
+    ERROR()
+  }
   // Get Type
   std::string type = it->getValue();
   it++;

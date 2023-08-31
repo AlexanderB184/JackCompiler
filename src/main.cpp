@@ -44,10 +44,8 @@ int main(int argc, char const* argv[]) {
   // std::string file = load(path);
 
   Jack::LexerResult r = Jack::tokenize(
-      "class TEST {\nstatic int test;\nfield String str;\n method void master(int x, "
-      "float y) {var foo; let g = g[0] + 1; return g; if (5) { do g; } else "
-      "{let "
-      "i = \"hi\";}}}");
+      "class TEST {static int x,y,z;field char w, o; method boolean foo(int "
+      "bar, String str) {var int i,j,k;return 0;}}");
   if (r.exit_code != Jack::LexerResult::ExitCode::okay) {
     handleError(r);
     return 1;
@@ -59,8 +57,15 @@ int main(int argc, char const* argv[]) {
     return 1;
   }
   std::cout << r2.abstractSyntaxTree << std::endl;
-
-  // Jack::ParseTree t = Jack::parse(tokens);
+  std::vector<Jack::SymbolTable> tables;
+  Jack::TableBuildResult r3 =
+      Jack::buildSymbolTables(tables, r2.abstractSyntaxTree);
+  if (r3.exit_code != Jack::TableBuildResult::ExitCode::okay) {
+    return 1;
+  }
+  for (auto table : tables) {
+    std::cout << table << std::endl;
+  }
 
   return 0;
 }

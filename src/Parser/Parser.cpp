@@ -1,6 +1,6 @@
 #include "Parser.h"
 
-#include "../Types/ParseTree.h"
+#include "../ParseTree/ParseTree.h"
 #include "RecursiveDecentParser.h"
 
 namespace Jack {
@@ -165,7 +165,7 @@ ParserResult parseVarDec(ParseTree& parent,
   COULD_BE(Keyword, "int")
   else COULD_BE(Keyword, "char") else COULD_BE(
       Keyword, "boolean") else MUST_BE_TYPE(Identifier, "type specifier");
-
+  MUST_BE_TYPE(Identifier, "variable name")
   while (HAVE(Symbol, ",")) {
     MUST_BE(Symbol, ",") MUST_BE_TYPE(Identifier, "variable name")
   }

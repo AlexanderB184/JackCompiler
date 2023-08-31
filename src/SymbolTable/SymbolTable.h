@@ -23,6 +23,8 @@ struct TableBuildResult {
   size_t exit_line, exit_col;
 };
 
+// uint16_t SymbolTable::nStatics = 0;
+
 /**
  * A symbol table class which stores information about all variables in a scope
  * All symbol tables are scoped to a single class and function
@@ -31,6 +33,7 @@ struct TableBuildResult {
  */
 class SymbolTable {
  private:
+  std::string owner;  // name of the class which this table is scoped to.
   std::unordered_map<std::string, Symbol> table;
   static u_int16_t nStatics;
   u_int16_t nFields;
@@ -38,7 +41,9 @@ class SymbolTable {
   u_int16_t nVars;
 
  public:
-  SymbolTable();
+  std::unordered_map<std::string, Symbol>::const_iterator cbegin() const;
+  std::unordered_map<std::string, Symbol>::const_iterator cend() const;
+  SymbolTable(const std::string&);
   SymbolTable(const SymbolTable&);
   SymbolTable(SymbolTable&&);
   SymbolTable& operator=(const SymbolTable&);
@@ -57,18 +62,8 @@ class SymbolTable {
   TableBuildResult addFromSubroutineBody(const ParseTree&);
   TableBuildResult addFromVarDec(const ParseTree&);
   TableBuildResult addFromParamList(const ParseTree&);
-
-  // methods to get memory segment sizes
-
-  uint16_t getStaticCount();
-  uint16_t getFieldCount();
-  uint16_t getArgCount();
-  uint16_t getVarCount();
 };
 
-uint16_t SymbolTable::nStatics = 0;
-
-TableBuildResult buildSymbolTables(std::vector<SymbolTable>&,
-                                      const ParseTree&);
+TableBuildResult buildSymbolTables(std::vector<SymbolTable>&, const ParseTree&);
 
 }  // namespace Jack
